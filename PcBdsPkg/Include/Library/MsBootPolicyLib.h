@@ -25,8 +25,6 @@ typedef enum {
   MsBootHDD,        /// Hard Drive type boot devices
   MsBootUSB,        /// Boot Devices containing a Usb Device
   MsBootNVME,       /// Nvme boot devices
-  MsBootODD,        /// Optical Disk drive devices
-  MsBootSD,         /// Sd/Emmc type devices
   MsBootRAMDISK,    /// Ram Disk devices
   MsBootHttp4,      /// Boot devices that support IPV4 Http
   MsBootHttp6       /// Boot devices supporting IPV6 Http
