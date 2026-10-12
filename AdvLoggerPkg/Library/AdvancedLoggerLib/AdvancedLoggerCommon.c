@@ -13,11 +13,55 @@
 
 #include <Library/AdvancedLoggerHdwPortLib.h>
 #include <Library/BaseMemoryLib.h>
+#include <Library/DebugLib.h>
 #include <Library/PcdLib.h>
 #include <Library/SynchronizationLib.h>
 #include <Library/TimerLib.h>
 
 #include "../AdvancedLoggerCommon.h"
+#include "AdvancedLoggerTrace.h"
+
+#define ADVANCED_LOGGER_TRACE(Message) \
+  AdvancedLoggerTrace ( \
+    "[DXE-ALOG][DxeCore] " Message "\n", \
+    "[DXE-ALOG][Runtime] " Message "\n", \
+    "[SMM-ALOG][SmmCore] " Message "\n", \
+    sizeof ("[DXE-ALOG][DxeCore] " Message "\n") - 1 \
+    )
+
+/**
+  Emit temporary DXE/runtime and SMM_CORE diagnostics without re-entering DebugLib.
+
+  @param[in] DxeMessage      Complete DXE diagnostic.
+  @param[in] RuntimeMessage  Complete runtime diagnostic of the same length.
+  @param[in] SmmMessage      Complete SMM diagnostic of the same length.
+  @param[in] MessageSize     Diagnostic length, excluding the terminator.
+**/
+STATIC
+VOID
+AdvancedLoggerTrace (
+  IN CONST CHAR8  *DxeMessage,
+  IN CONST CHAR8  *RuntimeMessage,
+  IN CONST CHAR8  *SmmMessage,
+  IN UINTN        MessageSize
+  )
+{
+  CONST CHAR8  *Message;
+  UINT16       Phase;
+
+  Phase = AdvancedLoggerGetPhase ();
+  if (Phase == ADVANCED_LOGGER_PHASE_DXE) {
+    Message = DxeMessage;
+  } else if (Phase == ADVANCED_LOGGER_PHASE_RUNTIME) {
+    Message = RuntimeMessage;
+  } else if (Phase == ADVANCED_LOGGER_PHASE_SMM_CORE) {
+    Message = SmmMessage;
+  } else {
+    return;
+  }
+
+  AdvancedLoggerTraceHardware (Message, MessageSize);
+}
 
 /**
   Write data from buffer into the in memory logging buffer.
@@ -50,11 +94,15 @@ AdvancedLoggerMemoryLoggerWrite (
   UINTN                             UsedSize;
   ADVANCED_LOGGER_MESSAGE_ENTRY_V2  *Entry;
 
+  ADVANCED_LOGGER_TRACE ("AdvancedLoggerMemoryLoggerWrite: ENTER");
+
   if ((NumberOfBytes == 0) || (Buffer == NULL)) {
+    ADVANCED_LOGGER_TRACE ("AdvancedLoggerMemoryLoggerWrite: RAM_SKIP_INVALID_INPUT");
     return NULL;
   }
 
   if (NumberOfBytes > MAX_UINT16) {
+    ADVANCED_LOGGER_TRACE ("AdvancedLoggerMemoryLoggerWrite: RAM_SKIP_INVALID_INPUT");
     return NULL;
   }
 
@@ -73,6 +121,7 @@ AdvancedLoggerMemoryLoggerWrite (
           // Wrap around the current cursor when auto wrap is enabled on buffer full during runtime.
           //
           NewBuffer = LoggerInfo->LogBufferOffset;
+          ADVANCED_LOGGER_TRACE ("AdvancedLoggerMemoryLoggerWrite: RAM_BEFORE_WRAP");
           OldValue  = InterlockedCompareExchange32 (
                         &LoggerInfo->LogCurrentOffset,
                         CurrentBuffer,
@@ -94,6 +143,7 @@ AdvancedLoggerMemoryLoggerWrite (
           //
           // Update the number of bytes of log that have not been captured
           //
+          ADVANCED_LOGGER_TRACE ("AdvancedLoggerMemoryLoggerWrite: RAM_DROP_FULL");
           do {
             CurrentSize = LoggerInfo->DiscardedSize;
             NewSize     = CurrentSize + (UINT32)NumberOfBytes;
@@ -110,6 +160,7 @@ AdvancedLoggerMemoryLoggerWrite (
 
       // EntrySize is contained within a UINT32, this is safe to do
       NewBuffer = (UINT32)(CurrentBuffer + EntrySize);
+      ADVANCED_LOGGER_TRACE ("AdvancedLoggerMemoryLoggerWrite: RAM_BEFORE_RESERVE");
       OldValue  = InterlockedCompareExchange32 (
                     &LoggerInfo->LogCurrentOffset,
                     CurrentBuffer,
@@ -118,6 +169,7 @@ AdvancedLoggerMemoryLoggerWrite (
     } while (OldValue != CurrentBuffer);
 
     Entry               = (ADVANCED_LOGGER_MESSAGE_ENTRY_V2 *)((UINT8 *)LoggerInfo + CurrentBuffer);
+    ADVANCED_LOGGER_TRACE ("AdvancedLoggerMemoryLoggerWrite: RAM_BEFORE_WRITE");
     Entry->MajorVersion = ADVANCED_LOGGER_MSG_MAJ_VER;
     Entry->MinorVersion = ADVANCED_LOGGER_MSG_MIN_VER;
     Entry->TimeStamp    = GetPerformanceCounter ();    // AdvancedLoggerGetTimeStamp();
@@ -130,6 +182,9 @@ AdvancedLoggerMemoryLoggerWrite (
     Entry->MessageLen    = (UINT16)NumberOfBytes;
     CopyMem (Entry->MessageText, Buffer, NumberOfBytes);
     Entry->Signature = MESSAGE_ENTRY_SIGNATURE_V2;
+    ADVANCED_LOGGER_TRACE ("AdvancedLoggerMemoryLoggerWrite: RAM_COMMIT");
+  } else {
+    ADVANCED_LOGGER_TRACE ("AdvancedLoggerMemoryLoggerWrite: RAM_BLOCK_NO_LOGGER");
   }
 
   return LoggerInfo;
@@ -192,6 +247,8 @@ AdvancedLoggerWrite (
   )
 {
   ADVANCED_LOGGER_INFO  *LoggerInfo;
+
+  ADVANCED_LOGGER_TRACE ("AdvancedLoggerWrite: ENTER");
 
   // All messages go to the in memory log.
   LoggerInfo = AdvancedLoggerMemoryLoggerWrite (DebugLevel, Buffer, NumberOfBytes);

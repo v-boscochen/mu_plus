@@ -22,6 +22,7 @@
 #include <Library/UefiBootServicesTableLib.h>
 
 #include "../AdvancedLoggerCommon.h"
+#include "../AdvancedLoggerTrace.h"
 
 STATIC ADVANCED_LOGGER_INFO  *mLoggerInfo;
 STATIC UINT32                mBufferSize  = 0;
@@ -64,6 +65,7 @@ AdvancedLoggerWriteProtocol (
   IN        UINTN                     NumberOfBytes
   )
 {
+  ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ALOG][SmmCore] AdvancedLoggerWriteProtocol: ENTER\n");
   AdvancedLoggerWrite (ErrorLevel, Buffer, NumberOfBytes);
 }
 
@@ -87,32 +89,40 @@ ValidateInfoBlock (
   VOID
   )
 {
+  ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ALOG][SmmCore] ValidateInfoBlock: ENTER\n");
   if (mLoggerInfo == NULL) {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ALOG][SmmCore] ValidateInfoBlock: REJECT_NO_LOGGER\n");
     return FALSE;
   }
 
   if (mLoggerInfo->Signature != ADVANCED_LOGGER_SIGNATURE) {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ALOG][SmmCore] ValidateInfoBlock: REJECT_SIGNATURE\n");
     return FALSE;
   }
 
   if (mLoggerInfo->LogBufferOffset != EXPECTED_LOG_BUFFER_OFFSET (mLoggerInfo)) {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ALOG][SmmCore] ValidateInfoBlock: REJECT_BUFFER_OFFSET\n");
     return FALSE;
   }
 
   if ((PA_FROM_PTR (LOG_CURRENT_FROM_ALI (mLoggerInfo)) > mMaxAddress) ||
       (mLoggerInfo->LogCurrentOffset < mLoggerInfo->LogBufferOffset))
   {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ALOG][SmmCore] ValidateInfoBlock: REJECT_CURSOR_BOUNDS\n");
     return FALSE;
   }
 
   if (mBufferSize == 0) {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ALOG][SmmCore] ValidateInfoBlock: CACHE_BUFFER_SIZE\n");
     mBufferSize = mLoggerInfo->LogBufferSize;
   } else {
     if (mLoggerInfo->LogBufferSize != mBufferSize) {
+      ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ALOG][SmmCore] ValidateInfoBlock: REJECT_BUFFER_SIZE\n");
       return FALSE;
     }
   }
 
+  ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ALOG][SmmCore] ValidateInfoBlock: VALID\n");
   return TRUE;
 }
 
@@ -128,16 +138,19 @@ SmmInitializeLoggerInfo (
   ADVANCED_LOGGER_PROTOCOL  *LoggerProtocol;
   EFI_STATUS                Status;
 
+  ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ALOG][SmmCore] SmmInitializeLoggerInfo: ENTER\n");
   if (!mInitialized) {
     //
     // Locate the Logger Information block.
     //
     if (gBS == NULL) {
+      ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ALOG][SmmCore] SmmInitializeLoggerInfo: NO_BOOT_SERVICES\n");
       return;
     }
 
     mInitialized = TRUE;                // Only one attempt at getting the logger info block.
 
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ALOG][SmmCore] SmmInitializeLoggerInfo: LOCATE_DXE_PROTOCOL\n");
     Status = gBS->LocateProtocol (
                     &gAdvancedLoggerProtocolGuid,
                     NULL,
@@ -160,6 +173,7 @@ SmmInitializeLoggerInfo (
   }
 
   if (!ValidateInfoBlock ()) {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ALOG][SmmCore] SmmInitializeLoggerInfo: INVALIDATE_LOGGER\n");
     mLoggerInfo = NULL;
   }
 }
@@ -174,7 +188,14 @@ AdvancedLoggerGetLoggerInfo (
   VOID
   )
 {
+  ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ALOG][SmmCore] AdvancedLoggerGetLoggerInfo: ENTER\n");
   SmmInitializeLoggerInfo ();
+
+  if (mLoggerInfo == NULL) {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ALOG][SmmCore] AdvancedLoggerGetLoggerInfo: RETURN_NULL\n");
+  } else {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ALOG][SmmCore] AdvancedLoggerGetLoggerInfo: RETURN_VALID\n");
+  }
 
   return mLoggerInfo;
 }
@@ -217,6 +238,7 @@ SmmCoreAdvancedLoggerLibConstructor (
   EFI_HANDLE  Handle;
   EFI_STATUS  Status;
 
+  ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ALOG][SmmCore] SmmCoreAdvancedLoggerLibConstructor: ENTER\n");
   ASSERT ((gBS != NULL) && (gSmst != NULL));
 
   SmmInitializeLoggerInfo ();

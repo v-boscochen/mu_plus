@@ -22,6 +22,7 @@
 
 [Sources]
   AdvLoggerSmmAccessLib.c
+  ../AdvancedLoggerLib/AdvancedLoggerTrace.h
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -29,6 +30,7 @@
   AdvLoggerPkg/AdvLoggerPkg.dec
 
 [LibraryClasses]
+  AdvancedLoggerHdwPortLib
   BaseLib
   BaseMemoryLib
   DebugLib

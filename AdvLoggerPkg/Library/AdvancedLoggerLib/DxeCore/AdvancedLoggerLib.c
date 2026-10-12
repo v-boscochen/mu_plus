@@ -28,6 +28,7 @@
 #include <Library/VariablePolicyHelperLib.h>
 
 #include "../AdvancedLoggerCommon.h"
+#include "../AdvancedLoggerTrace.h"
 
 //
 // Protocol interface that connects the DXE library instances with the AdvancedLogger
@@ -73,6 +74,7 @@ AdvancedLoggerWriteProtocol (
   IN        UINTN                     NumberOfBytes
   )
 {
+  ADVANCED_LOGGER_TRACE_HARDWARE ("[DXE-ALOG][DxeCore] AdvancedLoggerWriteProtocol: ENTER\n");
   AdvancedLoggerWrite (ErrorLevel, Buffer, NumberOfBytes);
 }
 
@@ -96,28 +98,35 @@ ValidateInfoBlock (
   VOID
   )
 {
+  ADVANCED_LOGGER_TRACE_HARDWARE ("[DXE-ALOG][DxeCore] ValidateInfoBlock: ENTER\n");
   if (mLoggerInfo == NULL) {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[DXE-ALOG][DxeCore] ValidateInfoBlock: REJECT_NO_LOGGER\n");
     return FALSE;
   }
 
   if (mLoggerInfo->Signature != ADVANCED_LOGGER_SIGNATURE) {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[DXE-ALOG][DxeCore] ValidateInfoBlock: REJECT_SIGNATURE\n");
     return FALSE;
   }
 
   if (mLoggerInfo->LogBufferOffset != EXPECTED_LOG_BUFFER_OFFSET (mLoggerInfo)) {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[DXE-ALOG][DxeCore] ValidateInfoBlock: REJECT_BUFFER_OFFSET\n");
     return FALSE;
   }
 
   if ((PA_FROM_PTR (LOG_CURRENT_FROM_ALI (mLoggerInfo)) > mMaxAddress) ||
       (mLoggerInfo->LogCurrentOffset < mLoggerInfo->LogBufferOffset))
   {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[DXE-ALOG][DxeCore] ValidateInfoBlock: REJECT_CURSOR_BOUNDS\n");
     return FALSE;
   }
 
   if (mLoggerInfo->LogBufferSize != mBufferSize) {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[DXE-ALOG][DxeCore] ValidateInfoBlock: REJECT_BUFFER_SIZE\n");
     return FALSE;
   }
 
+  ADVANCED_LOGGER_TRACE_HARDWARE ("[DXE-ALOG][DxeCore] ValidateInfoBlock: VALID\n");
   return TRUE;
 }
 
@@ -134,6 +143,7 @@ AdvancedLoggerGetLoggerInfo (
   EFI_HOB_GUID_TYPE    *GuidHob;
   ADVANCED_LOGGER_PTR  *LogPtr;
 
+  ADVANCED_LOGGER_TRACE_HARDWARE ("[DXE-ALOG][DxeCore] AdvancedLoggerGetLoggerInfo: ENTER\n");
   if (!mInitialized) {
     mInitialized = TRUE;
 
@@ -162,7 +172,14 @@ AdvancedLoggerGetLoggerInfo (
   }
 
   if (((mLoggerInfo) != NULL) && !ValidateInfoBlock ()) {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[DXE-ALOG][DxeCore] AdvancedLoggerGetLoggerInfo: INVALIDATE_LOGGER\n");
     mLoggerInfo = NULL;
+  }
+
+  if (mLoggerInfo == NULL) {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[DXE-ALOG][DxeCore] AdvancedLoggerGetLoggerInfo: RETURN_NULL\n");
+  } else {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[DXE-ALOG][DxeCore] AdvancedLoggerGetLoggerInfo: RETURN_VALID\n");
   }
 
   return mLoggerInfo;
@@ -439,6 +456,7 @@ DxeCoreAdvancedLoggerLibConstructor (
   EFI_STATUS            Status;
   ADVANCED_LOGGER_INFO  *LoggerInfo;
 
+  ADVANCED_LOGGER_TRACE_HARDWARE ("[DXE-ALOG][DxeCore] DxeCoreAdvancedLoggerLibConstructor: ENTER\n");
   LoggerInfo = AdvancedLoggerGetLoggerInfo ();
 
   //

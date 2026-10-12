@@ -15,6 +15,8 @@
 #include <Library/DebugLib.h>
 #include <Library/SmmServicesTableLib.h>
 
+#include "../AdvancedLoggerTrace.h"
+
 STATIC BOOLEAN                   mInitialized = FALSE;
 STATIC ADVANCED_LOGGER_PROTOCOL  *mSmmLoggerProtocol;
 
@@ -29,7 +31,9 @@ SmmInitializeLoggerInfo (
 {
   EFI_STATUS  Status;
 
+  ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ALOG][Smm] SmmInitializeLoggerInfo: ENTER\n");
   if (gSmst == NULL) {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ALOG][Smm] SmmInitializeLoggerInfo: NO_SMM_SERVICES\n");
     return;
   }
 
@@ -40,6 +44,7 @@ SmmInitializeLoggerInfo (
 
     mInitialized = TRUE;                // Only one attempt at getting the logger info block.
 
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ALOG][Smm] SmmInitializeLoggerInfo: LOCATE_SMM_PROTOCOL\n");
     Status = gSmst->SmmLocateProtocol (
                       &gAdvancedLoggerProtocolGuid,
                       NULL,
@@ -47,6 +52,7 @@ SmmInitializeLoggerInfo (
                       );
 
     if (EFI_ERROR (Status)) {
+      ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ALOG][Smm] SmmInitializeLoggerInfo: PROTOCOL_LOOKUP_FAILED\n");
       mSmmLoggerProtocol = NULL;
     } else {
       ASSERT (mSmmLoggerProtocol->Signature == ADVANCED_LOGGER_PROTOCOL_SIGNATURE);
@@ -77,10 +83,14 @@ AdvancedLoggerWrite (
   IN        UINTN  NumberOfBytes
   )
 {
+  ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ALOG][Smm] AdvancedLoggerWrite: ENTER\n");
   SmmInitializeLoggerInfo ();
 
   if (mSmmLoggerProtocol != NULL) {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ALOG][Smm] AdvancedLoggerWrite: FORWARD_TO_SMM_CORE\n");
     mSmmLoggerProtocol->AdvancedLoggerWriteProtocol (mSmmLoggerProtocol, ErrorLevel, Buffer, NumberOfBytes);
+  } else {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ALOG][Smm] AdvancedLoggerWrite: NO_SMM_PROTOCOL\n");
   }
 }
 
@@ -101,6 +111,7 @@ SmmAdvancedLoggerLibConstructor (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
+  ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ALOG][Smm] SmmAdvancedLoggerLibConstructor: ENTER\n");
   SmmInitializeLoggerInfo ();
 
   return EFI_SUCCESS;

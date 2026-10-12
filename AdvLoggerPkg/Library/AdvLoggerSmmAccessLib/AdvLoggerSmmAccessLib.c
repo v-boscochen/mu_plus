@@ -23,6 +23,8 @@
 #include <Library/SafeIntLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 
+#include "../AdvancedLoggerLib/AdvancedLoggerTrace.h"
+
 STATIC ADVANCED_LOGGER_INFO  *mLoggerInfo        = NULL;
 STATIC UINT32                mBufferSize         = 0;
 STATIC EFI_PHYSICAL_ADDRESS  mMaxAddress         = 0;
@@ -49,32 +51,40 @@ ValidateInfoBlock (
   VOID
   )
 {
+  ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ACCESS] ValidateInfoBlock: ENTER\n");
   if (mLoggerInfo == NULL) {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ACCESS] ValidateInfoBlock: REJECT_NO_LOGGER\n");
     return FALSE;
   }
 
   if (mLoggerInfo->Signature != ADVANCED_LOGGER_SIGNATURE) {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ACCESS] ValidateInfoBlock: REJECT_SIGNATURE\n");
     return FALSE;
   }
 
   if (mLoggerInfo->LogBufferOffset != sizeof (*mLoggerInfo)) {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ACCESS] ValidateInfoBlock: REJECT_BUFFER_OFFSET\n");
     return FALSE;
   }
 
   if ((PA_FROM_PTR (LOG_CURRENT_FROM_ALI (mLoggerInfo)) > mMaxAddress) ||
       (mLoggerInfo->LogCurrentOffset < mLoggerInfo->LogBufferOffset))
   {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ACCESS] ValidateInfoBlock: REJECT_CURSOR_BOUNDS\n");
     return FALSE;
   }
 
   if (mBufferSize == 0) {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ACCESS] ValidateInfoBlock: CACHE_BUFFER_SIZE\n");
     mBufferSize = mLoggerInfo->LogBufferSize;
   } else {
     if (mLoggerInfo->LogBufferSize != mBufferSize) {
+      ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ACCESS] ValidateInfoBlock: REJECT_BUFFER_SIZE\n");
       return FALSE;
     }
   }
 
+  ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ACCESS] ValidateInfoBlock: VALID\n");
   return TRUE;
 }
 
@@ -94,7 +104,9 @@ AdvLoggerAccessInit (
   UINTN                     TempSize;
   EFI_STATUS                Status;
 
+  ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ACCESS] AdvLoggerAccessInit: ENTER\n");
   if (gBS == NULL) {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ACCESS] AdvLoggerAccessInit: NO_BOOT_SERVICES\n");
     return;
   }
 
@@ -130,6 +142,7 @@ AdvLoggerAccessInit (
     }
 
     if (!ValidateInfoBlock ()) {
+      ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ACCESS] AdvLoggerAccessInit: INVALIDATE_LOGGER\n");
       mLoggerInfo = NULL;
     }
   }
@@ -194,15 +207,19 @@ AdvLoggerAccessGetVariable (
   UINT8       *LogBufferEnd;
   UINTN       LogBufferSize;
 
+  ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ACCESS] AdvLoggerAccessGetVariable: READ_ENTER\n");
   if ((!ValidateInfoBlock ()) || (mLoggerTransferSize == 0)) {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ACCESS] AdvLoggerAccessGetVariable: READ_UNSUPPORTED\n");
     return EFI_UNSUPPORTED;
   }
 
   if ((VariableName == NULL) || (VendorGuid == NULL) || (DataSize == NULL)) {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ACCESS] AdvLoggerAccessGetVariable: READ_INVALID_PARAMETER\n");
     return EFI_INVALID_PARAMETER;
   }
 
   if (VariableName[0] != L'V') {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ACCESS] AdvLoggerAccessGetVariable: READ_NOT_FOUND\n");
     return EFI_NOT_FOUND;
   }
 
@@ -213,10 +230,12 @@ AdvLoggerAccessGetVariable (
              );
 
   if (EFI_ERROR (Status)) {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ACCESS] AdvLoggerAccessGetVariable: READ_INVALID_PARAMETER\n");
     return EFI_INVALID_PARAMETER;
   }
 
   if (*EndPointer != L'\0') {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ACCESS] AdvLoggerAccessGetVariable: READ_INVALID_PARAMETER\n");
     return EFI_INVALID_PARAMETER;
   }
 
@@ -225,6 +244,7 @@ AdvLoggerAccessGetVariable (
   LogBufferStart += (BlockNumber * mLoggerTransferSize);
 
   if (LogBufferStart >= LogBufferEnd) {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ACCESS] AdvLoggerAccessGetVariable: READ_NOT_FOUND\n");
     return EFI_NOT_FOUND;
   }
 
@@ -234,17 +254,21 @@ AdvLoggerAccessGetVariable (
   }
 
   if (LogBufferSize > *DataSize) {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ACCESS] AdvLoggerAccessGetVariable: READ_BUFFER_TOO_SMALL\n");
     *DataSize = LogBufferSize;
     return EFI_BUFFER_TOO_SMALL;
   }
 
   if (Data == NULL) {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ACCESS] AdvLoggerAccessGetVariable: READ_INVALID_PARAMETER\n");
     return EFI_INVALID_PARAMETER;
   }
 
   *DataSize = LogBufferSize;
+  ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ACCESS] AdvLoggerAccessGetVariable: READ_BEFORE_COPY\n");
   CopyMem (Data, LogBufferStart, LogBufferSize);
 
+  ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ACCESS] AdvLoggerAccessGetVariable: READ_SUCCESS\n");
   return EFI_SUCCESS;
 }
 
@@ -260,8 +284,10 @@ AdvLoggerAccessAtRuntime (
   VOID
   )
 {
+  ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ACCESS] AdvLoggerAccessAtRuntime: ENTER\n");
   if (mLoggerInfo != NULL) {
     mLoggerInfo->AtRuntime = TRUE;
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[SMM-ACCESS] AdvLoggerAccessAtRuntime: SET_AT_RUNTIME\n");
   }
 }
 

@@ -22,12 +22,14 @@
 
 [Sources]
   AdvancedLoggerLib.c
+  ../AdvancedLoggerTrace.h
 
 [Packages]
   MdePkg/MdePkg.dec
   AdvLoggerPkg/AdvLoggerPkg.dec
 
 [LibraryClasses]
+  AdvancedLoggerHdwPortLib
   BaseLib
   DebugLib
   SmmServicesTableLib

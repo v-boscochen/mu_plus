@@ -20,6 +20,7 @@
 #include <Library/PcdLib.h>
 
 #include "../AdvancedLoggerCommon.h"
+#include "../AdvancedLoggerTrace.h"
 
 STATIC ADVANCED_LOGGER_INFO  *mLoggerInfo           = NULL;
 STATIC UINT32                mBufferSize            = 0;
@@ -54,32 +55,40 @@ ValidateInfoBlock (
   VOID
   )
 {
+  ADVANCED_LOGGER_TRACE_HARDWARE ("[DXE-ALOG][Runtime] ValidateInfoBlock: ENTER\n");
   if (mLoggerInfo == NULL) {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[DXE-ALOG][Runtime] ValidateInfoBlock: REJECT_NO_LOGGER\n");
     return FALSE;
   }
 
   if (mLoggerInfo->Signature != ADVANCED_LOGGER_SIGNATURE) {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[DXE-ALOG][Runtime] ValidateInfoBlock: REJECT_SIGNATURE\n");
     return FALSE;
   }
 
   if (mLoggerInfo->LogBufferOffset != EXPECTED_LOG_BUFFER_OFFSET (mLoggerInfo)) {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[DXE-ALOG][Runtime] ValidateInfoBlock: REJECT_BUFFER_OFFSET\n");
     return FALSE;
   }
 
   if ((PA_FROM_PTR (LOG_CURRENT_FROM_ALI (mLoggerInfo)) > mMaxAddress) ||
       (mLoggerInfo->LogCurrentOffset < mLoggerInfo->LogBufferOffset))
   {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[DXE-ALOG][Runtime] ValidateInfoBlock: REJECT_CURSOR_BOUNDS\n");
     return FALSE;
   }
 
   if (mBufferSize == 0) {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[DXE-ALOG][Runtime] ValidateInfoBlock: CACHE_BUFFER_SIZE\n");
     mBufferSize = mLoggerInfo->LogBufferSize;
   } else {
     if (mLoggerInfo->LogBufferSize != mBufferSize) {
+      ADVANCED_LOGGER_TRACE_HARDWARE ("[DXE-ALOG][Runtime] ValidateInfoBlock: REJECT_BUFFER_SIZE\n");
       return FALSE;
     }
   }
 
+  ADVANCED_LOGGER_TRACE_HARDWARE ("[DXE-ALOG][Runtime] ValidateInfoBlock: VALID\n");
   return TRUE;
 }
 
@@ -96,7 +105,9 @@ AdvancedLoggerGetLoggerInfo (
   ADVANCED_LOGGER_PROTOCOL  *LoggerProtocol;
   EFI_STATUS                Status;
 
+  ADVANCED_LOGGER_TRACE_HARDWARE ("[DXE-ALOG][Runtime] AdvancedLoggerGetLoggerInfo: ENTER\n");
   if ((mLoggerInfo == NULL) && (mBS != NULL)) {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[DXE-ALOG][Runtime] AdvancedLoggerGetLoggerInfo: LOCATE_DXE_PROTOCOL\n");
     Status = mBS->LocateProtocol (
                     &gAdvancedLoggerProtocolGuid,
                     NULL,
@@ -115,7 +126,14 @@ AdvancedLoggerGetLoggerInfo (
   }
 
   if (!ValidateInfoBlock ()) {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[DXE-ALOG][Runtime] AdvancedLoggerGetLoggerInfo: INVALIDATE_LOGGER\n");
     mLoggerInfo = NULL;
+  }
+
+  if (mLoggerInfo == NULL) {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[DXE-ALOG][Runtime] AdvancedLoggerGetLoggerInfo: RETURN_NULL\n");
+  } else {
+    ADVANCED_LOGGER_TRACE_HARDWARE ("[DXE-ALOG][Runtime] AdvancedLoggerGetLoggerInfo: RETURN_VALID\n");
   }
 
   return mLoggerInfo;
@@ -189,6 +207,7 @@ OnExitBootServicesNotification (
   IN VOID       *Context
   )
 {
+  ADVANCED_LOGGER_TRACE_HARDWARE ("[DXE-ALOG][Runtime] OnExitBootServicesNotification: CLEAR_LOGGER_AND_BOOT_SERVICES\n");
   //
   // Runtime logging is currently not supported, so clear mLoggerInfo.
   //
@@ -215,6 +234,7 @@ DxeRuntimeAdvancedLoggerLibConstructor (
 {
   EFI_STATUS  Status;
 
+  ADVANCED_LOGGER_TRACE_HARDWARE ("[DXE-ALOG][Runtime] DxeRuntimeAdvancedLoggerLibConstructor: ENTER\n");
   //
   // Cache BootServices pointer as AdvLogger calls may be made before
   // the constructor runs.

@@ -25,6 +25,7 @@
 [Sources]
   AdvancedLoggerLib.c
   ../AdvancedLoggerCommon.h
+  ../AdvancedLoggerTrace.h
   ../AdvancedLoggerCommon.c
 
 [Packages]
